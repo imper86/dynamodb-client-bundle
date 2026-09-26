@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-A Symfony bundle (`^6.4 || ^7.4 || ^8.0`, PHP >= 8.4) that registers `imper86/dynamodb-client` as a
+A Symfony bundle (`^6.4 || ^7.4 || ^8.0`, PHP >= 8.1) that registers `imper86/dynamodb-client` as a
 service. The library lives at `../oo-aws/dynamodb-client` and has its own CLAUDE.md, which is the
 authority on everything the client itself does.
 
@@ -17,9 +17,9 @@ vendor/bin/phpunit --filter testName
 
 `composer analyse` also runs as a captainhook pre-commit action, so any violation fails the commit.
 
-CI runs `composer analyse` on the newest dependencies. It runs PHPUnit alone on `--prefer-lowest` and
-with every symfony/* package pinned to `~6.4.33` and to `~7.4.0`. The lock file is not committed.
-When lowering a dependency floor, check it with `composer update --prefer-lowest` locally.
+CI runs `composer analyse` on PHP 8.4+ with the newest dependencies. It runs PHPUnit alone on PHP
+8.1–8.5 with `--prefer-lowest` and with every symfony/* package pinned to `~6.4.33` and to `~7.4.0`
+(Symfony 7.4 is skipped on 8.1). The lock file is not committed. When lowering a dependency floor, check it with `composer update --prefer-lowest` locally.
 
 ## Architecture
 
@@ -92,11 +92,18 @@ removed in Symfony 8, so keep all wiring in PHP.
 - **`phpstan-phpunit` narrows aggressively.** After an assertion PHPStan may consider a subject
   non-null and flag later `?->` as `nullsafe.neverNull`. Assign to a local, `assertInstanceOf`, and
   use plain `->` from there.
-- Classes are `final`, and also `readonly` where the parent allows it. The bundle class can't be,
-  because `AbstractBundle` has mutable state. Call multi-argument constructors with named arguments.
+- Classes are `final` with promoted `readonly` properties. Call multi-argument constructors with named
+  arguments.
+- **The floor is PHP 8.1**, because Symfony 6.4 supports it (and the library's floor matches). Development
+  runs on 8.4, so watch for what 8.1 lacks: `readonly` classes (8.2), standalone `null`/`true`/`false`
+  types (8.2), typed class constants (8.3), `#[Override]` (8.3), `new Foo()->bar()` without parentheses
+  (8.4), and newer built-ins. Composer scripts call `php` from `PATH`, so to run the suite on 8.1 put an
+  8.1 binary first and `composer update` in a scratch copy.
+- **Tests run on PHPUnit 10.5 through 13.** Use only API all of them share; match exception messages
+  with `expectExceptionMessageMatches()`.
 - php-cs-fixer enforces `@Symfony` + `@PER-CS2.0` plus global namespace imports, so `use function`
   every global function and keep imports sorted (`composer fix` does it).
-- Rector runs a php85 target with wide prepared sets (including `symfonyConfigs`). Check `rector.php`
+- Rector runs a php81 target with wide prepared sets (including `symfonyConfigs`). Check `rector.php`
   before fighting one of its rules.
 - **`composer fix` can need two runs.** php-cs-fixer runs *before* Rector, so a Rector rewrite can
   leave a file that `cs:check` then rejects.

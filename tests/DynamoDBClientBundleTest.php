@@ -23,7 +23,6 @@ use Symfony\Component\DependencyInjection\Exception\RuntimeException;
 use Symfony\Component\Filesystem\Exception\IOException;
 use Symfony\Component\Filesystem\Filesystem;
 use Exception;
-use Override;
 
 use function array_key_exists;
 use function getenv;
@@ -36,9 +35,9 @@ use function putenv;
 #[CoversClass(DynamoDBClientBundle::class)]
 final class DynamoDBClientBundleTest extends TestCase
 {
-    private const array ENV_VARIABLES = ['AWS_REGION', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_SESSION_TOKEN'];
+    private const ENV_VARIABLES = ['AWS_REGION', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_SESSION_TOKEN'];
 
-    private const array PLACEHOLDER_VARIABLES = [
+    private const PLACEHOLDER_VARIABLES = [
         'DYNAMODB_BUNDLE_TEST_REGION',
         'DYNAMODB_BUNDLE_TEST_KEY',
         'DYNAMODB_BUNDLE_TEST_SECRET',
@@ -57,7 +56,6 @@ final class DynamoDBClientBundleTest extends TestCase
     /** @var array<string, mixed> */
     private array $originalDotenv = [];
 
-    #[Override]
     protected function setUp(): void
     {
         foreach (self::ENV_VARIABLES as $name) {
@@ -79,7 +77,6 @@ final class DynamoDBClientBundleTest extends TestCase
     /**
      * @throws IOException
      */
-    #[Override]
     protected function tearDown(): void
     {
         $filesystem = new Filesystem();

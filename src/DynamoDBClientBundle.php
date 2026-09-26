@@ -21,7 +21,7 @@ use function is_array;
 
 final class DynamoDBClientBundle extends AbstractBundle
 {
-    private const string CLIENT_SERVICE_ID = 'imper86_dynamodb_client.client';
+    private const CLIENT_SERVICE_ID = 'imper86_dynamodb_client.client';
 
     protected string $extensionAlias = 'imper86_dynamodb_client';
 
@@ -68,7 +68,7 @@ final class DynamoDBClientBundle extends AbstractBundle
             ->defaultValue('%env(default::AWS_SESSION_TOKEN)%')
             ->beforeNormalization()
             ->ifTrue(static fn(mixed $token): bool => '' === $token)
-            ->then(static fn(): null => null)
+            ->then(static fn(): ?string => null)
         ;
     }
 

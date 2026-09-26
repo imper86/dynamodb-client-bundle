@@ -35,7 +35,7 @@ return RectorConfig::configure()
         symfonyCodeQuality: true,
         symfonyConfigs: true,
     )
-    ->withPhpSets(php85: true)
+    ->withPhpSets(php81: true)
     ->withComposerBased(
         doctrine: true,
         phpunit: true,
