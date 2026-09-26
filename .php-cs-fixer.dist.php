@@ -1,0 +1,146 @@
+<?php
+
+use PhpCsFixer\Runner\Parallel\ParallelConfigFactory;
+
+$finder = new PhpCsFixer\Finder()
+    ->in(['src', 'tests']);
+
+return new PhpCsFixer\Config()
+    ->setRules([
+        '@Symfony' => true,
+        '@Symfony:risky' => true,
+        '@PER-CS2.0' => true,
+        '@PER-CS2.0:risky' => true,
+        'global_namespace_import' => [
+            'import_constants' => true,
+            'import_functions' => true,
+        ],
+        'phpdoc_align' => [
+            'align' => 'left',
+        ],
+        'phpdoc_separation' => false,
+        'declare_strict_types' => true,
+        'blank_line_before_statement' => [
+            'statements' => [
+                'break',
+                'case',
+                'continue',
+                'declare',
+                'default',
+                'exit',
+                'goto',
+                'include',
+                'include_once',
+                'phpdoc',
+                'require',
+                'require_once',
+                'return',
+                'switch',
+                'throw',
+                'try',
+                'yield',
+                'yield_from',
+            ],
+        ],
+        'combine_consecutive_issets' => true,
+        'combine_consecutive_unsets' => true,
+        'empty_loop_body' => true,
+        'explicit_indirect_variable' => true,
+        'explicit_string_variable' => true,
+        'fully_qualified_strict_types' => [
+            'import_symbols' => true,
+        ],
+        'heredoc_to_nowdoc' => true,
+        'method_argument_space' => [
+            'on_multiline' => 'ensure_fully_multiline',
+        ],
+        'method_chaining_indentation' => true,
+        'multiline_comment_opening_closing' => true,
+        'multiline_whitespace_before_semicolons' => [
+            'strategy' => 'new_line_for_chained_calls',
+        ],
+        'no_extra_blank_lines' => [
+            'tokens' => [
+                'attribute',
+                'break',
+                'case',
+                'continue',
+                'curly_brace_block',
+                'default',
+                'extra',
+                'parenthesis_brace_block',
+                'return',
+                'square_brace_block',
+                'switch',
+                'throw',
+                'use',
+            ],
+        ],
+        'no_superfluous_elseif' => true,
+        'no_superfluous_phpdoc_tags' => [
+            'allow_mixed' => true,
+            'remove_inheritdoc' => true,
+        ],
+        'no_unneeded_control_parentheses' => [
+            'statements' => [
+                'break',
+                'clone',
+                'continue',
+                'echo_print',
+                'negative_instanceof',
+                'others',
+                'return',
+                'switch_case',
+                'yield',
+                'yield_from',
+            ],
+        ],
+        'no_useless_else' => true,
+        'no_useless_return' => true,
+        'no_whitespace_before_comma_in_array' => [
+            'after_heredoc' => true,
+        ],
+        'ordered_class_elements' => true,
+        'ordered_types' => true,
+        'php_unit_internal_class' => true,
+        'php_unit_test_class_requires_covers' => true,
+        'phpdoc_add_missing_param_annotation' => true,
+        'phpdoc_no_empty_return' => true,
+        'phpdoc_order_by_value' => true,
+        'phpdoc_types_order' => true,
+        'phpdoc_var_annotation_correct_order' => true,
+        'protected_to_private' => true,
+        'return_assignment' => true,
+        'self_static_accessor' => true,
+        'single_line_comment_style' => true,
+        'single_line_empty_body' => true,
+        'string_implicit_backslashes' => true,
+        'trailing_comma_in_multiline' => [
+            'after_heredoc' => true,
+            'elements' => ['array_destructuring', 'arrays'],
+        ],
+        'whitespace_after_comma_in_array' => ['ensure_single_space' => true],
+        //risky
+        'comment_to_phpdoc' => true,
+        'final_internal_class' => true,
+        'native_constant_invocation' => [
+            'fix_built_in' => false,
+            'include' => ['DIRECTORY_SEPARATOR', 'PHP_INT_SIZE', 'PHP_SAPI', 'PHP_VERSION_ID'],
+            'scope' => 'namespaced',
+            'strict' => true,
+        ],
+        'no_alias_functions' => ['sets' => ['@all']],
+        'no_unset_on_property' => true,
+        'php_unit_data_provider_name' => true,
+        'php_unit_data_provider_return_type' => true,
+        'php_unit_data_provider_static' => ['force' => true],
+        'php_unit_strict' => true,
+        'php_unit_test_case_static_method_calls' => ['call_type' => 'self'],
+        'static_lambda' => true,
+        'strict_comparison' => true,
+        'strict_param' => true,
+        'yield_from_array_to_yields' => true,
+        //custom
+        'single_line_throw' => false,
+    ])
+    ->setFinder($finder);

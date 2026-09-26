@@ -1,0 +1,79 @@
+{
+    "name": "imper86/dynamodb-client-bundle",
+    "description": "Symfony bundle for imper86/dynamodb-client",
+    "type": "symfony-bundle",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Imper86\\DynamoDBClientBundle\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Imper86\\DynamoDBClientBundleTests\\": "tests/"
+        }
+    },
+    "authors": [
+        {
+            "name": "imper86",
+            "email": "me@imper.info"
+        }
+    ],
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "captainhook/captainhook-phar": true,
+            "php-http/discovery": false
+        }
+    },
+    "require": {
+        "php": ">=8.4",
+        "imper86/dynamodb-client": "^1.0"
+    },
+    "require-dev": {
+        "captainhook/captainhook-phar": "^5.29",
+        "friendsofphp/php-cs-fixer": "^3.95",
+        "nyholm/psr7": "^1.8",
+        "php-http/curl-client": "^2.4",
+        "php-http/message": "^1.16",
+        "php-http/mock-client": "^1.6",
+        "phpstan/phpstan": "^2.2",
+        "phpstan/phpstan-deprecation-rules": "^2.0",
+        "phpstan/phpstan-phpunit": "^2.0",
+        "phpstan/phpstan-strict-rules": "^2.0",
+        "phpstan/phpstan-webmozart-assert": "^2.0",
+        "phpunit/phpunit": "^13.3",
+        "rector/rector": "^2.6",
+        "shipmonk/composer-dependency-analyser": "^1.8"
+    },
+    "scripts": {
+        "cs:check": "php-cs-fixer check --allow-risky=yes",
+        "cs:fix": "php-cs-fixer fix --allow-risky=yes",
+        "stan": "phpstan analyse --memory-limit=1G",
+        "rector:check": "rector process --dry-run",
+        "rector:fix": "rector process",
+        "cda": "composer-dependency-analyser",
+        "unit": "phpunit",
+        "analyse": [
+            "@cs:check",
+            "@stan",
+            "@rector:check",
+            "@cda",
+            "@unit"
+        ],
+        "fix": [
+            "@cs:fix",
+            "@rector:fix"
+        ]
+    },
+    "scripts-descriptions": {
+        "cs:check": "Runs php-cs-fixer check without changing files",
+        "cs:fix": "Runs php-cs-fixer fix",
+        "stan": "Runs phpstan",
+        "rector:check": "Runs rector dry run",
+        "rector:fix": "Runs rector",
+        "cda": "Runs composer-dependency-analyser",
+        "analyse": "Runs cs:check, stan, rector:check and cda",
+        "fix": "Runs cs:fix and rector:fix"
+    }
+}
