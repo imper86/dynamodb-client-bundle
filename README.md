@@ -1,6 +1,16 @@
-# dynamodb-client-bundle
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/logo-dark.svg">
+    <img src=".github/assets/logo-light.svg" alt="dynamodb-client-bundle" width="480">
+  </picture>
+</p>
 
-[![CI](https://github.com/imper86/dynamodb-client-bundle/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/imper86/dynamodb-client-bundle/actions/workflows/ci.yml)
+<p align="center">
+  <a href="https://github.com/imper86/dynamodb-client-bundle/actions/workflows/ci.yml"><img src="https://github.com/imper86/dynamodb-client-bundle/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
+  <a href="https://codecov.io/gh/imper86/dynamodb-client-bundle"><img src="https://codecov.io/gh/imper86/dynamodb-client-bundle/graph/badge.svg" alt="Coverage"></a>
+  <a href="https://packagist.org/packages/imper86/dynamodb-client-bundle"><img src="https://img.shields.io/packagist/v/imper86/dynamodb-client-bundle" alt="Packagist"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/packagist/l/imper86/dynamodb-client-bundle" alt="License"></a>
+</p>
 
 A Symfony bundle that registers [`imper86/dynamodb-client`](https://github.com/imper86/dynamodb-client)
 as an autowirable service. It works with Symfony 6.4, 7.4 and 8.x on PHP 8.4 or newer.

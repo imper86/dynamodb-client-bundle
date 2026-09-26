@@ -84,3 +84,28 @@ jobs:
           dependency-versions: ${{ matrix.dependencies }}
 
       - run: vendor/bin/phpunit
+
+  # Coverage is measured once, on the newest dependencies, and reported to Codecov for the README badge.
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: pcov
+          tools: composer:v2
+
+      - uses: ramsey/composer-install@v3
+        with:
+          dependency-versions: highest
+
+      - run: vendor/bin/phpunit --coverage-clover coverage.xml
+
+      - uses: codecov/codecov-action@v5
+        with:
+          files: coverage.xml
+          # The repository upload token, from the repository's settings page on codecov.io.
+          token: ${{ secrets.CODECOV_TOKEN }}
