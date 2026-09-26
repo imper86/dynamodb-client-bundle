@@ -18,8 +18,8 @@ vendor/bin/phpunit --filter testName
 `composer analyse` also runs as a captainhook pre-commit action, so any violation fails the commit.
 
 CI runs `composer analyse` on PHP 8.4+ with the newest dependencies. It runs PHPUnit alone on PHP
-8.1–8.5 with `--prefer-lowest` and with every symfony/* package pinned to `~6.4.33` and to `~7.4.0`
-(Symfony 7.4 is skipped on 8.1). The lock file is not committed. When lowering a dependency floor, check it with `composer update --prefer-lowest` locally.
+8.1–8.5 with `--prefer-lowest` and with every symfony/* package pinned to `~6.4.33`, `~7.4.0` and
+`~8.0.0` (Symfony 7.4 is skipped on 8.1, Symfony 8.0 on 8.1–8.3). The lock file is not committed. When lowering a dependency floor, check it with `composer update --prefer-lowest` locally.
 
 ## Architecture
 
