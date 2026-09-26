@@ -7,7 +7,6 @@ namespace Imper86\DynamoDBClientBundleTests;
 use Http\Mock\Client as MockClient;
 use Imper86\DynamoDBClient\DynamoDBClientInterface;
 use Imper86\DynamoDBClient\Exception\ExceptionInterface;
-use Imper86\DynamoDBClient\Exception\MissingCredentialsException;
 use Imper86\DynamoDBClientBundle\DynamoDBClientBundle;
 use Imper86\DynamoDBClientBundleTests\Fixtures\ClassConsumer;
 use Imper86\DynamoDBClientBundleTests\Fixtures\InterfaceConsumer;
@@ -19,12 +18,14 @@ use PHPUnit\Framework\TestCase;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
+use Symfony\Component\DependencyInjection\Exception\EnvNotFoundException;
 use Symfony\Component\DependencyInjection\Exception\RuntimeException;
 use Symfony\Component\Filesystem\Exception\IOException;
 use Symfony\Component\Filesystem\Filesystem;
 use Exception;
 use Override;
 
+use function array_key_exists;
 use function getenv;
 use function is_string;
 use function putenv;
@@ -35,12 +36,13 @@ use function putenv;
 #[CoversClass(DynamoDBClientBundle::class)]
 final class DynamoDBClientBundleTest extends TestCase
 {
-    private const array ENV_VARIABLES = ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_SESSION_TOKEN'];
+    private const array ENV_VARIABLES = ['AWS_REGION', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_SESSION_TOKEN'];
 
     private const array PLACEHOLDER_VARIABLES = [
         'DYNAMODB_BUNDLE_TEST_REGION',
         'DYNAMODB_BUNDLE_TEST_KEY',
         'DYNAMODB_BUNDLE_TEST_SECRET',
+        'DYNAMODB_BUNDLE_TEST_TOKEN',
     ];
 
     /** @var list<TestKernel> */
@@ -49,12 +51,28 @@ final class DynamoDBClientBundleTest extends TestCase
     /** @var array<string, false|string> */
     private array $originalEnv = [];
 
+    /** @var array<string, mixed> */
+    private array $originalServer = [];
+
+    /** @var array<string, mixed> */
+    private array $originalDotenv = [];
+
     #[Override]
     protected function setUp(): void
     {
         foreach (self::ENV_VARIABLES as $name) {
             $this->originalEnv[$name] = getenv($name);
             putenv($name);
+
+            if (array_key_exists($name, $_SERVER)) {
+                $this->originalServer[$name] = $_SERVER[$name];
+            }
+
+            if (array_key_exists($name, $_ENV)) {
+                $this->originalDotenv[$name] = $_ENV[$name];
+            }
+
+            unset($_SERVER[$name], $_ENV[$name]);
         }
     }
 
@@ -73,6 +91,15 @@ final class DynamoDBClientBundleTest extends TestCase
 
         foreach ($this->originalEnv as $name => $value) {
             putenv(is_string($value) ? $name . '=' . $value : $name);
+            unset($_SERVER[$name], $_ENV[$name]);
+        }
+
+        foreach ($this->originalServer as $name => $value) {
+            $_SERVER[$name] = $value;
+        }
+
+        foreach ($this->originalDotenv as $name => $value) {
+            $_ENV[$name] = $value;
         }
 
         foreach (self::PLACEHOLDER_VARIABLES as $name) {
@@ -156,6 +183,77 @@ final class DynamoDBClientBundleTest extends TestCase
      * @throws Exception
      * @throws ExceptionInterface
      */
+    public function testAcceptsTokenFromEnvPlaceholder(): void
+    {
+        $_SERVER['DYNAMODB_BUNDLE_TEST_TOKEN'] = $_ENV['DYNAMODB_BUNDLE_TEST_TOKEN'] = 'placeholder-token';
+
+        $request = $this->sendListTables([
+            'region' => 'eu-west-1',
+            'credentials' => [
+                'key' => 'AKIDCONFIGURED',
+                'secret' => 'configured-secret',
+                'token' => '%env(DYNAMODB_BUNDLE_TEST_TOKEN)%',
+            ],
+        ]);
+
+        self::assertSame('placeholder-token', $request->getHeaderLine('X-Amz-Security-Token'));
+    }
+
+    /**
+     * @throws Exception
+     * @throws ExceptionInterface
+     */
+    public function testTreatsEmptyTokenAsNoToken(): void
+    {
+        $request = $this->sendListTables([
+            'region' => 'eu-west-1',
+            'credentials' => ['key' => 'AKIDCONFIGURED', 'secret' => 'configured-secret', 'token' => ''],
+        ]);
+
+        self::assertFalse($request->hasHeader('X-Amz-Security-Token'));
+    }
+
+    /**
+     * @throws Exception
+     * @throws ExceptionInterface
+     */
+    public function testReadsEverythingFromDotenvWithoutConfiguration(): void
+    {
+        $_SERVER['AWS_REGION'] = $_ENV['AWS_REGION'] = 'eu-north-1';
+        $_SERVER['AWS_ACCESS_KEY_ID'] = $_ENV['AWS_ACCESS_KEY_ID'] = 'AKIDFROMDOTENV';
+        $_SERVER['AWS_SECRET_ACCESS_KEY'] = $_ENV['AWS_SECRET_ACCESS_KEY'] = 'dotenv-secret';
+        $_SERVER['AWS_SESSION_TOKEN'] = $_ENV['AWS_SESSION_TOKEN'] = 'dotenv-token';
+
+        $request = $this->sendListTables([]);
+
+        self::assertSame('dynamodb.eu-north-1.amazonaws.com', $request->getUri()->getHost());
+        self::assertMatchesRegularExpression(
+            '#Credential=AKIDFROMDOTENV/\d{8}/eu-north-1/dynamodb/aws4_request#',
+            $request->getHeaderLine('Authorization'),
+        );
+        self::assertSame('dotenv-token', $request->getHeaderLine('X-Amz-Security-Token'));
+    }
+
+    /**
+     * @throws Exception
+     * @throws ExceptionInterface
+     */
+    public function testSkipsEmptySessionTokenFromEnvironment(): void
+    {
+        $_SERVER['AWS_SESSION_TOKEN'] = $_ENV['AWS_SESSION_TOKEN'] = '';
+
+        $request = $this->sendListTables([
+            'region' => 'eu-west-1',
+            'credentials' => ['key' => 'AKIDCONFIGURED', 'secret' => 'configured-secret'],
+        ]);
+
+        self::assertFalse($request->hasHeader('X-Amz-Security-Token'));
+    }
+
+    /**
+     * @throws Exception
+     * @throws ExceptionInterface
+     */
     public function testFallsBackToProcessEnvironmentWithoutCredentials(): void
     {
         putenv('AWS_ACCESS_KEY_ID=AKIDFROMENV');
@@ -178,7 +276,8 @@ final class DynamoDBClientBundleTest extends TestCase
     {
         $kernel = $this->bootKernel(['region' => 'us-east-2']);
 
-        $this->expectException(MissingCredentialsException::class);
+        $this->expectException(EnvNotFoundException::class);
+        $this->expectExceptionMessageMatches('/AWS_ACCESS_KEY_ID/');
 
         $kernel->getContainer()->get(TestKernel::CLIENT_BY_INTERFACE);
     }
@@ -247,21 +346,13 @@ final class DynamoDBClientBundleTest extends TestCase
      */
     public static function provideRejectsInvalidConfigurationCases(): iterable
     {
-        yield 'missing region' => [[]];
-
         yield 'empty region' => [['region' => '']];
 
-        yield 'missing credentials secret' => [['region' => 'eu-west-1', 'credentials' => ['key' => 'AKID']]];
-
-        yield 'missing credentials key' => [['region' => 'eu-west-1', 'credentials' => ['secret' => 'secret']]];
+        yield 'null region' => [['region' => null]];
 
         yield 'empty credentials key' => [['region' => 'eu-west-1', 'credentials' => ['key' => '', 'secret' => 'secret']]];
 
         yield 'empty credentials secret' => [['region' => 'eu-west-1', 'credentials' => ['key' => 'AKID', 'secret' => '']]];
-
-        yield 'empty credentials token' => [
-            ['region' => 'eu-west-1', 'credentials' => ['key' => 'AKID', 'secret' => 'secret', 'token' => '']],
-        ];
 
         yield 'unknown root key' => [['region' => 'eu-west-1', 'endpoint' => 'http://localhost:8000']];
 

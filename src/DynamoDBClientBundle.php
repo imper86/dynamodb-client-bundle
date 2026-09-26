@@ -40,34 +40,35 @@ final class DynamoDBClientBundle extends AbstractBundle
 
         $children->scalarNode('region')
             ->info('AWS region of the DynamoDB endpoint, for example "eu-central-1".')
-            ->isRequired()
+            ->defaultValue('%env(AWS_REGION)%')
             ->cannotBeEmpty()
         ;
 
         $credentials = $children->arrayNode('credentials')
-            ->info('Static AWS credentials. Leave out to read AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and AWS_SESSION_TOKEN with getenv().')
+            ->info('AWS credentials. Each value defaults to its standard AWS environment variable.')
+            ->addDefaultsIfNotSet()
         ;
 
         $credentialsChildren = $credentials->children();
 
         $credentialsChildren->scalarNode('key')
             ->info('AWS access key ID.')
-            ->isRequired()
+            ->defaultValue('%env(AWS_ACCESS_KEY_ID)%')
             ->cannotBeEmpty()
         ;
 
         $credentialsChildren->scalarNode('secret')
             ->info('AWS secret access key.')
-            ->isRequired()
+            ->defaultValue('%env(AWS_SECRET_ACCESS_KEY)%')
             ->cannotBeEmpty()
         ;
 
         $credentialsChildren->scalarNode('token')
-            ->info('Session token of temporary credentials.')
-            ->defaultNull()
-            ->validate()
+            ->info('Session token of temporary credentials. An empty string means no token.')
+            ->defaultValue('%env(default::AWS_SESSION_TOKEN)%')
+            ->beforeNormalization()
             ->ifTrue(static fn(mixed $token): bool => '' === $token)
-            ->thenInvalid('The token must be a non-empty string or null, got %s.')
+            ->then(static fn(): null => null)
         ;
     }
 

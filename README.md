@@ -28,7 +28,9 @@ for example:
 composer require symfony/http-client nyholm/psr7
 ```
 
-There is no Flex recipe, so register the bundle yourself in `config/bundles.php`:
+With Symfony Flex, the recipe registers the bundle and adds `AWS_REGION`, `AWS_ACCESS_KEY_ID` and
+`AWS_SECRET_ACCESS_KEY` to your `.env`. Without Flex, register the bundle yourself in
+`config/bundles.php`:
 
 ```php
 return [
@@ -39,15 +41,24 @@ return [
 
 ## Configuration
 
+The bundle needs no config file. By default it reads the standard AWS environment variables, from the
+real environment or from your `.env` files:
+
 ```yaml
-# config/packages/imper86_dynamodb_client.yaml
+# config/packages/imper86_dynamodb_client.yaml (these are the defaults)
 imper86_dynamodb_client:
-    region: '%env(AWS_REGION)%'                 # required, non-empty
-    credentials:                                # optional; omit to use the process env (getenv)
-        key: '%env(AWS_ACCESS_KEY_ID)%'         # required inside credentials
-        secret: '%env(AWS_SECRET_ACCESS_KEY)%'  # required inside credentials
-        token: ~                                # optional session token
+    region: '%env(AWS_REGION)%'
+    credentials:
+        key: '%env(AWS_ACCESS_KEY_ID)%'
+        secret: '%env(AWS_SECRET_ACCESS_KEY)%'
+        token: '%env(default::AWS_SESSION_TOKEN)%'   # optional; null or '' means no session token
 ```
+
+Create the file only to override a value, for example to use different variable names. `region`, `key`
+and `secret` must not be empty. If `AWS_REGION`, `AWS_ACCESS_KEY_ID` or `AWS_SECRET_ACCESS_KEY` isn't
+set anywhere, fetching the client throws an `EnvNotFoundException`. `AWS_SESSION_TOKEN` is optional. If
+you point `token` at your own variable that may be empty, use the `default::` processor as above, so
+that an empty value means "no token".
 
 Run `bin/console config:dump-reference imper86_dynamodb_client` to see the full reference.
 
@@ -55,24 +66,6 @@ If the container has a `Psr\Http\Client\ClientInterface` service (for example fr
 `symfony/http-client` with `nyholm/psr7` installed), the client sends its requests through it, so they
 show up in the profiler. Otherwise it finds an HTTP client through
 [`php-http/discovery`](https://github.com/php-http/discovery).
-
-### Credentials from `.env`
-
-Without a `credentials` section, the client reads `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and
-`AWS_SESSION_TOKEN` with `getenv()` when the service is created. It sees only real process
-environment variables. Values that exist only in your `.env` files are **not** visible to it, because
-Symfony's Dotenv does not call `putenv()` by default. If the variables are missing, fetching the
-client throws a `MissingCredentialsException`.
-
-If your credentials live in `.env`, pass them in explicitly:
-
-```yaml
-imper86_dynamodb_client:
-    region: '%env(AWS_REGION)%'
-    credentials:
-        key: '%env(AWS_ACCESS_KEY_ID)%'
-        secret: '%env(AWS_SECRET_ACCESS_KEY)%'
-```
 
 ## Usage
 

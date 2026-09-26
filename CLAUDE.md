@@ -28,14 +28,18 @@ production code: `configure()` defines the config tree and `loadExtension()` reg
 There is no separate Extension/Configuration class and no YAML/XML service file. XML service config is
 removed in Symfony 8, so keep all wiring in PHP.
 
-- The config root key is `imper86_dynamodb_client`. The tree holds only `region` (required) and
-  `credentials` (optional: `key`, `secret`, `token`). Add more only on request.
+- The config root key is `imper86_dynamodb_client`. The tree holds only `region` and `credentials`
+  (`key`, `secret`, `token`). Add more only on request. Every node defaults to its standard AWS env var
+  (`%env(AWS_REGION)%`, `%env(AWS_ACCESS_KEY_ID)%`, `%env(AWS_SECRET_ACCESS_KEY)%`,
+  `%env(default::AWS_SESSION_TOKEN)%`), and `credentials` uses `addDefaultsIfNotSet()`, so the bundle
+  works with no config file at all. The Flex recipe (symfony/recipes-contrib) therefore only
+  registers the bundle and adds those env vars to `.env`; keep it that way.
 - Service `imper86_dynamodb_client.client` (private) is `DynamoDBClient`. Only
   `DynamoDBClientInterface` is aliased to it for autowiring; the concrete `DynamoDBClient` class is
   deliberately not autowirable, so apps depend on the interface. New services follow the same pattern:
   a snake_case id prefixed `imper86_dynamodb_client.` plus an alias for their interface.
-- `$credentials` is an `inline_service(Credentials::class)` when configured, otherwise `null`. The
-  library then falls back to `Credentials::fromEnvironment()`.
+- `$credentials` is an `inline_service(Credentials::class)`. Because of the env defaults, it is
+  always configured, so the library's `Credentials::fromEnvironment()` fallback is never used.
 - `$httpClient` is `service(ClientInterface::class)->nullOnInvalid()`. It uses the app's PSR-18 client
   when there is one (so requests appear in the profiler) and otherwise falls back to discovery. There
   is no config key for it.
@@ -70,8 +74,9 @@ removed in Symfony 8, so keep all wiring in PHP.
   quietly reuse the first one.
 - Every config rule gets a case in `testRejectsInvalidConfiguration`'s data provider, which expects
   `InvalidConfigurationException`.
-- `setUp` clears `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`/`AWS_SESSION_TOKEN`, so the developer's own
-  AWS env never leaks into the fallback tests.
+- `setUp` clears `AWS_REGION`/`AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`/`AWS_SESSION_TOKEN` from
+  `getenv()`, `$_SERVER` and `$_ENV` (Symfony's `%env()%` reads all three), so the developer's own
+  AWS env never leaks into the default-value tests.
 - Tests that touch `putenv()`, `$_SERVER` or `$_ENV` restore them in `tearDown`.
 - `#[CoversClass]` on every test class (php-cs-fixer enforces it).
 
@@ -97,15 +102,16 @@ removed in Symfony 8, so keep all wiring in PHP.
   leave a file that `cs:check` then rejects.
 - **Never `assertEquals` two objects.** Rector turns it into `assertSame`, which compares identity.
   Compare members instead.
-- **`cannotBeEmpty()` also rejects an explicit `~`.** Use it only on required nodes. Optional
-  nullable nodes (like `token`) reject `''` through `validate()->ifTrue()` instead, so `token: ~` stays
-  valid.
+- **`cannotBeEmpty()` also rejects an explicit `~`.** Use it only on nodes that need a value (`region`,
+  `key`, `secret`). Optional nullable nodes (like `token`) must not reject `''` with
+  `validate()`: `ValidateEnvPlaceholdersPass` checks every string `%env()%` placeholder as `''`, so
+  such a rule rejects every env-based value. `token` maps `''` to `null` in `beforeNormalization()`
+  instead.
 - **CDA can't see `inline_service()`/`service()`** (they are declared inside `ContainerConfigurator.php`),
   so `composer-dependency-analyser.php` ignores them by name. Add any new configurator function there.
 - `TestKernel::registerBundles()` narrows its `@return` to `list<DynamoDBClientBundle>`: the inherited
   `iterable<BundleInterface>` names an interface deprecated in Symfony 8.1, which PHPStan flags.
-- **Credentials fallback:** with no `credentials` configured, the library calls `getenv()` **when the
-  service is created**. Values that exist only in `.env` are invisible to it (Dotenv doesn't
-  `putenv()` by default). A missing variable throws `MissingCredentialsException` when the client is
-  first fetched, not when a request is sent. `.env` users should configure
-  `credentials: { key: '%env(...)%', secret: '%env(...)%' }` explicitly.
+- **Env defaults:** the defaults go through Symfony's `%env()%`, so they see `.env` values as well as
+  the real environment. A missing `AWS_REGION`/`AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` throws
+  `EnvNotFoundException` when the client is first fetched, not when a request is sent. Only defaults
+  skip config validation. A user-supplied `%env()%` value still goes through `ValidateEnvPlaceholdersPass`.
