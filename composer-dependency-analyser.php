@@ -3,11 +3,11 @@
 declare(strict_types=1);
 
 use ShipMonk\ComposerDependencyAnalyser\Config\Configuration;
-use ShipMonk\ComposerDependencyAnalyser\Config\ErrorType;
 
 return new Configuration()
-    // Required at runtime by Symfony's PhpDocExtractor, never referenced directly.
-    ->ignoreErrorsOnPackage('phpdocumentor/reflection-docblock', [ErrorType::UNUSED_DEPENDENCY])
-    // Required at runtime by Symfony's AbstractObjectNormalizer on denormalization, never referenced directly.
-    ->ignoreErrorsOnPackage('symfony/property-access', [ErrorType::UNUSED_DEPENDENCY])
+    // Declared in ContainerConfigurator.php, so they only exist once that class is autoloaded.
+    ->ignoreUnknownFunctions([
+        'Symfony\Component\DependencyInjection\Loader\Configurator\inline_service',
+        'Symfony\Component\DependencyInjection\Loader\Configurator\service',
+    ])
 ;
