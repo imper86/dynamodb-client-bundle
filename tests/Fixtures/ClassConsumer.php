@@ -6,9 +6,9 @@ namespace Imper86\DynamoDBClientBundleTests\Fixtures;
 
 use Imper86\DynamoDBClient\DynamoDBClient;
 
-final readonly class ClassConsumer
+final class ClassConsumer
 {
     public function __construct(
-        public DynamoDBClient $client,
+        public readonly DynamoDBClient $client,
     ) {}
 }

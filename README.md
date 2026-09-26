@@ -13,7 +13,7 @@
 </p>
 
 A Symfony bundle that registers [`imper86/dynamodb-client`](https://github.com/imper86/dynamodb-client)
-as an autowirable service. It works with Symfony 6.4, 7.4 and 8.x on PHP 8.4 or newer.
+as an autowirable service. It works with Symfony 6.4, 7.4 and 8.x on PHP 8.1 or newer.
 
 ## Installation
 

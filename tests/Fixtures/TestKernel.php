@@ -7,7 +7,6 @@ namespace Imper86\DynamoDBClientBundleTests\Fixtures;
 use Imper86\DynamoDBClient\DynamoDBClientInterface;
 use Imper86\DynamoDBClientBundle\DynamoDBClientBundle;
 use Exception;
-use Override;
 use Psr\Http\Client\ClientInterface;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -18,7 +17,7 @@ use function uniqid;
 
 final class TestKernel extends Kernel
 {
-    public const string CLIENT_BY_INTERFACE = 'test.dynamodb_client.interface';
+    public const CLIENT_BY_INTERFACE = 'test.dynamodb_client.interface';
 
     public readonly string $tempDir;
 
@@ -68,19 +67,16 @@ final class TestKernel extends Kernel
         });
     }
 
-    #[Override]
     public function getCacheDir(): string
     {
         return $this->tempDir . '/cache';
     }
 
-    #[Override]
     public function getLogDir(): string
     {
         return $this->tempDir . '/log';
     }
 
-    #[Override]
     public function getProjectDir(): string
     {
         return __DIR__;
