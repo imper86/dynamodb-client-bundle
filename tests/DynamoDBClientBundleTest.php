@@ -23,6 +23,7 @@ use Symfony\Component\DependencyInjection\Exception\RuntimeException;
 use Symfony\Component\Filesystem\Exception\IOException;
 use Symfony\Component\Filesystem\Filesystem;
 use Exception;
+use InvalidArgumentException;
 
 use function array_key_exists;
 use function getenv;
@@ -35,13 +36,22 @@ use function putenv;
 #[CoversClass(DynamoDBClientBundle::class)]
 final class DynamoDBClientBundleTest extends TestCase
 {
-    private const ENV_VARIABLES = ['AWS_REGION', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_SESSION_TOKEN'];
+    private const ENV_VARIABLES = [
+        'AWS_REGION',
+        'AWS_ACCESS_KEY_ID',
+        'AWS_SECRET_ACCESS_KEY',
+        'AWS_SESSION_TOKEN',
+        'AWS_ENDPOINT_URL_DYNAMODB',
+        'AWS_ENDPOINT_URL',
+        'AWS_IGNORE_CONFIGURED_ENDPOINT_URLS',
+    ];
 
     private const PLACEHOLDER_VARIABLES = [
         'DYNAMODB_BUNDLE_TEST_REGION',
         'DYNAMODB_BUNDLE_TEST_KEY',
         'DYNAMODB_BUNDLE_TEST_SECRET',
         'DYNAMODB_BUNDLE_TEST_TOKEN',
+        'DYNAMODB_BUNDLE_TEST_ENDPOINT',
     ];
 
     /** @var list<TestKernel> */
@@ -214,6 +224,107 @@ final class DynamoDBClientBundleTest extends TestCase
      * @throws Exception
      * @throws ExceptionInterface
      */
+    public function testSendsRequestsToConfiguredEndpoint(): void
+    {
+        $request = $this->sendListTables([
+            'region' => 'eu-west-1',
+            'endpoint' => 'http://localhost:8000',
+            'credentials' => ['key' => 'AKIDCONFIGURED', 'secret' => 'configured-secret'],
+        ]);
+
+        self::assertSame('http://localhost:8000/', (string) $request->getUri());
+        self::assertMatchesRegularExpression(
+            '#Credential=AKIDCONFIGURED/\d{8}/eu-west-1/dynamodb/aws4_request#',
+            $request->getHeaderLine('Authorization'),
+        );
+    }
+
+    /**
+     * @throws Exception
+     * @throws ExceptionInterface
+     */
+    public function testResolvesEndpointFromEnvPlaceholder(): void
+    {
+        $_SERVER['DYNAMODB_BUNDLE_TEST_ENDPOINT'] = $_ENV['DYNAMODB_BUNDLE_TEST_ENDPOINT'] = 'http://dynamodb:8000';
+
+        $request = $this->sendListTables([
+            'region' => 'eu-west-1',
+            'endpoint' => '%env(DYNAMODB_BUNDLE_TEST_ENDPOINT)%',
+            'credentials' => ['key' => 'AKIDCONFIGURED', 'secret' => 'configured-secret'],
+        ]);
+
+        self::assertSame('http://dynamodb:8000/', (string) $request->getUri());
+    }
+
+    /**
+     * @throws Exception
+     * @throws ExceptionInterface
+     */
+    public function testTreatsEmptyEndpointFromEnvPlaceholderAsNoEndpoint(): void
+    {
+        $_SERVER['DYNAMODB_BUNDLE_TEST_ENDPOINT'] = $_ENV['DYNAMODB_BUNDLE_TEST_ENDPOINT'] = '';
+
+        $request = $this->sendListTables([
+            'region' => 'eu-west-1',
+            'endpoint' => '%env(default::DYNAMODB_BUNDLE_TEST_ENDPOINT)%',
+            'credentials' => ['key' => 'AKIDCONFIGURED', 'secret' => 'configured-secret'],
+        ]);
+
+        self::assertSame('https://dynamodb.eu-west-1.amazonaws.com/', (string) $request->getUri());
+    }
+
+    /**
+     * @throws Exception
+     * @throws ExceptionInterface
+     */
+    public function testTreatsEmptyEndpointAsNoEndpoint(): void
+    {
+        $request = $this->sendListTables([
+            'region' => 'eu-west-1',
+            'endpoint' => '',
+            'credentials' => ['key' => 'AKIDCONFIGURED', 'secret' => 'configured-secret'],
+        ]);
+
+        self::assertSame('https://dynamodb.eu-west-1.amazonaws.com/', (string) $request->getUri());
+    }
+
+    /**
+     * @throws Exception
+     * @throws ExceptionInterface
+     */
+    public function testLeavesEndpointToProcessEnvironmentByDefault(): void
+    {
+        putenv('AWS_ENDPOINT_URL_DYNAMODB=http://localhost:8001');
+
+        $request = $this->sendListTables([
+            'region' => 'eu-west-1',
+            'credentials' => ['key' => 'AKIDCONFIGURED', 'secret' => 'configured-secret'],
+        ]);
+
+        self::assertSame('http://localhost:8001/', (string) $request->getUri());
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function testThrowsWhenEndpointIsNotAnHttpUrl(): void
+    {
+        $kernel = $this->bootKernel([
+            'region' => 'eu-west-1',
+            'endpoint' => 'localhost:8000',
+            'credentials' => ['key' => 'AKIDCONFIGURED', 'secret' => 'configured-secret'],
+        ]);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('/must be an absolute http or https url/');
+
+        $kernel->getContainer()->get(TestKernel::CLIENT_BY_INTERFACE);
+    }
+
+    /**
+     * @throws Exception
+     * @throws ExceptionInterface
+     */
     public function testReadsEverythingFromDotenvWithoutConfiguration(): void
     {
         $_SERVER['AWS_REGION'] = $_ENV['AWS_REGION'] = 'eu-north-1';
@@ -351,7 +462,7 @@ final class DynamoDBClientBundleTest extends TestCase
 
         yield 'empty credentials secret' => [['region' => 'eu-west-1', 'credentials' => ['key' => 'AKID', 'secret' => '']]];
 
-        yield 'unknown root key' => [['region' => 'eu-west-1', 'endpoint' => 'http://localhost:8000']];
+        yield 'unknown root key' => [['region' => 'eu-west-1', 'profile' => 'default']];
 
         yield 'unknown credentials key' => [
             ['region' => 'eu-west-1', 'credentials' => ['key' => 'AKID', 'secret' => 'secret', 'profile' => 'default']],

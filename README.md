@@ -48,6 +48,7 @@ real environment or from your `.env` files:
 # config/packages/imper86_dynamodb_client.yaml (these are the defaults)
 imper86_dynamodb_client:
     region: '%env(AWS_REGION)%'
+    endpoint: ~                                      # optional; see "Custom endpoint" below
     credentials:
         key: '%env(AWS_ACCESS_KEY_ID)%'
         secret: '%env(AWS_SECRET_ACCESS_KEY)%'
@@ -61,6 +62,34 @@ you point `token` at your own variable that may be empty, use the `default::` pr
 that an empty value means "no token".
 
 Run `bin/console config:dump-reference imper86_dynamodb_client` to see the full reference.
+
+### Custom endpoint
+
+By default requests go to `https://dynamodb.<region>.amazonaws.com`. To use another endpoint, such as
+[DynamoDB Local](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBLocal.html) in
+Docker, set `endpoint` to an absolute `http` or `https` url:
+
+```yaml
+# config/packages/imper86_dynamodb_client.yaml
+when@dev:
+    imper86_dynamodb_client:
+        endpoint: 'http://localhost:8000'
+```
+
+DynamoDB Local does not check credentials, but requests are still signed, so the key and secret must
+not be empty. Any value works.
+
+If you leave `endpoint` unset, the client reads `AWS_ENDPOINT_URL_DYNAMODB` and then
+`AWS_ENDPOINT_URL` from the real process environment, the same way the AWS SDKs do. It does not see
+`.env` files. To read the endpoint from `.env`, point `endpoint` at the variable with the `default::`
+processor, so an empty or missing value means the regional AWS endpoint:
+
+```yaml
+imper86_dynamodb_client:
+    endpoint: '%env(default::DYNAMODB_ENDPOINT)%'
+```
+
+An invalid endpoint throws an `InvalidArgumentException` when the client is first fetched.
 
 If the container has a `Psr\Http\Client\ClientInterface` service (for example from
 `symfony/http-client` with `nyholm/psr7` installed), the client sends its requests through it, so they

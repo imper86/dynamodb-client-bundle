@@ -28,12 +28,17 @@ production code: `configure()` defines the config tree and `loadExtension()` reg
 There is no separate Extension/Configuration class and no YAML/XML service file. XML service config is
 removed in Symfony 8, so keep all wiring in PHP.
 
-- The config root key is `imper86_dynamodb_client`. The tree holds only `region` and `credentials`
-  (`key`, `secret`, `token`). Add more only on request. Every node defaults to its standard AWS env var
-  (`%env(AWS_REGION)%`, `%env(AWS_ACCESS_KEY_ID)%`, `%env(AWS_SECRET_ACCESS_KEY)%`,
-  `%env(default::AWS_SESSION_TOKEN)%`), and `credentials` uses `addDefaultsIfNotSet()`, so the bundle
-  works with no config file at all. The Flex recipe (symfony/recipes-contrib) therefore only
-  registers the bundle and adds those env vars to `.env`; keep it that way.
+- The config root key is `imper86_dynamodb_client`. The tree holds only `region`, `endpoint` and
+  `credentials` (`key`, `secret`, `token`). Add more only on request. Every node except `endpoint`
+  defaults to its standard AWS env var (`%env(AWS_REGION)%`, `%env(AWS_ACCESS_KEY_ID)%`,
+  `%env(AWS_SECRET_ACCESS_KEY)%`, `%env(default::AWS_SESSION_TOKEN)%`), and `credentials` uses
+  `addDefaultsIfNotSet()`, so the bundle works with no config file at all. The Flex recipe
+  (symfony/recipes-contrib) therefore only registers the bundle and adds those env vars to `.env`;
+  keep it that way.
+- `endpoint` defaults to `null` and maps `''` to `null` like `token`. With `null`, the library falls
+  back to `AWS_ENDPOINT_URL_DYNAMODB`/`AWS_ENDPOINT_URL` via `getenv()` (so not `.env`). Don't default
+  it to an `%env()%` placeholder: that would override the library's precedence. The library validates
+  the url, so the tree doesn't.
 - Service `imper86_dynamodb_client.client` (private) is `DynamoDBClient`. Only
   `DynamoDBClientInterface` is aliased to it for autowiring; the concrete `DynamoDBClient` class is
   deliberately not autowirable, so apps depend on the interface. New services follow the same pattern:
@@ -74,9 +79,10 @@ removed in Symfony 8, so keep all wiring in PHP.
   quietly reuse the first one.
 - Every config rule gets a case in `testRejectsInvalidConfiguration`'s data provider, which expects
   `InvalidConfigurationException`.
-- `setUp` clears `AWS_REGION`/`AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`/`AWS_SESSION_TOKEN` from
-  `getenv()`, `$_SERVER` and `$_ENV` (Symfony's `%env()%` reads all three), so the developer's own
-  AWS env never leaks into the default-value tests.
+- `setUp` clears `AWS_REGION`/`AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`/`AWS_SESSION_TOKEN` and the
+  endpoint variables (`AWS_ENDPOINT_URL_DYNAMODB`/`AWS_ENDPOINT_URL`/`AWS_IGNORE_CONFIGURED_ENDPOINT_URLS`)
+  from `getenv()`, `$_SERVER` and `$_ENV` (Symfony's `%env()%` reads all three), so the developer's own
+  AWS env never leaks into the default-value or host assertions.
 - Tests that touch `putenv()`, `$_SERVER` or `$_ENV` restore them in `tearDown`.
 - `#[CoversClass]` on every test class (php-cs-fixer enforces it).
 

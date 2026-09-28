@@ -44,6 +44,18 @@ final class DynamoDBClientBundle extends AbstractBundle
             ->cannotBeEmpty()
         ;
 
+        $children->scalarNode('endpoint')
+            ->info(
+                'Absolute http(s) url to send requests to instead of the regional AWS endpoint, for example'
+                . ' "http://localhost:8000" for DynamoDB Local. Null or an empty string leaves the choice to'
+                . ' the client, which reads AWS_ENDPOINT_URL_DYNAMODB and AWS_ENDPOINT_URL.',
+            )
+            ->defaultNull()
+            ->beforeNormalization()
+            ->ifTrue(static fn(mixed $endpoint): bool => '' === $endpoint)
+            ->then(static fn(): ?string => null)
+        ;
+
         $credentials = $children->arrayNode('credentials')
             ->info('AWS credentials. Each value defaults to its standard AWS environment variable.')
             ->addDefaultsIfNotSet()
@@ -97,6 +109,7 @@ final class DynamoDBClientBundle extends AbstractBundle
                 '$region' => $config['region'] ?? null,
                 '$credentials' => $credentials,
                 '$httpClient' => service(ClientInterface::class)->nullOnInvalid(),
+                '$endpoint' => $config['endpoint'] ?? null,
             ])
         ;
 
