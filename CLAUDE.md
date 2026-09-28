@@ -128,3 +128,7 @@ removed in Symfony 8, so keep all wiring in PHP.
   the real environment. A missing `AWS_REGION`/`AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` throws
   `EnvNotFoundException` when the client is first fetched, not when a request is sent. Only defaults
   skip config validation. A user-supplied `%env()%` value still goes through `ValidateEnvPlaceholdersPass`.
+- **`symfony/dependency-injection` floor is `^6.4.19`.** Before 6.4.19, `ValidateEnvPlaceholdersPass`
+  types a `%env(default::X)%` placeholder as `bool|int|float|string|array`, so a scalar node rejects
+  it with `InvalidTypeException` (fixed by symfony/symfony@80eb609). The README recommends
+  `default::` for `endpoint` and `token`, so don't lower this floor.
